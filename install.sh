@@ -167,7 +167,7 @@ ensure_path_in_profile() {
 }
 
 main() {
-  local arches gh_arch refokus_arch
+  local arches gh_arch refokus_arch rest
   arches="$(detect_arch)"
   gh_arch="${arches% *}"
   refokus_arch="${arches#* }"
@@ -176,10 +176,15 @@ main() {
   unset GH_TOKEN GITHUB_TOKEN GH_ENTERPRISE_TOKEN GITHUB_ENTERPRISE_TOKEN
 
   mkdir -p "$BIN_DIR"
-  case ":$PATH:" in
-    *":$BIN_DIR:"*) ;;
-    *) export PATH="$BIN_DIR:$PATH" ;;
-  esac
+  # BIN_DIR goes first even when PATH already has it, so a gh we install
+  # wins over an older one (Homebrew's, say) earlier on PATH.
+  rest=":$PATH:"
+  while [[ "$rest" == *":$BIN_DIR:"* ]]; do
+    rest="${rest//:"$BIN_DIR":/:}"
+  done
+  rest="${rest#:}"
+  rest="${rest%:}"
+  export PATH="$BIN_DIR${rest:+:$rest}"
   WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/refokus-install.XXXXXX")"
   trap cleanup EXIT
 
